@@ -20,12 +20,39 @@ $(function () {
 
 	ipcRenderer.on("fileDeleted", (event, path) => {
 		images = images.filter((r) => r.path != path);
+		getMeAnotherFile();
+	});
+
+	function getMeAnotherFile() {
 		if (currentIndex == images.length - 1) {
 			previousImage();
 		} else {
 			nextImage();
 		}
+	}
+
+	ipcRenderer.on("settingsFileFound", (event, settingsToapp) => {
+		console.log(settingsToapp);
+		applySettings(settingsToapp);
 	});
+
+	categoryList = $("#category-list");
+
+	function applySettings(settingsToApply) {
+		settings = settingsToApply;
+		settings.forEach((category) => {
+			categoryList.html("");
+			categoryList.append(`
+			<li class="list-group-item d-flex justify-content-between align-items-center">
+						  ${category.name}
+						  <span class="badge text-primary badge-pill">Key: ${category.key}</span>
+						</li>`);
+		});
+	}
+
+	settings = [];
+
+	keyCombines = [];
 
 	function readFile(path) {
 		ipcRenderer.send("readFile", path);
@@ -43,8 +70,22 @@ $(function () {
 			case "delete":
 				deleteFile();
 				break;
+			default:
+				handlePress(e.key);
+				break;
 		}
 	});
+
+	function handlePress(key) {
+		const category = settings.find((r) => r.key == key);
+		if (category) {
+			moveFileToCategory(key, images[currentIndex].path);
+		}
+	}
+
+	function moveFileToCategory(path, category) {
+		ipcRenderer.send("moveFileToCategory", { path: path, category: category });
+	}
 
 	function deleteFile() {
 		ipcRenderer.send("deleteFile", images[currentIndex].path);

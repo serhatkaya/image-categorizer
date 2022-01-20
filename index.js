@@ -117,7 +117,17 @@ ipcMain.on("select-dirs", async (event, arg) => {
 		properties: ["openDirectory"],
 	});
 
-	fs.readdir(result.filePaths[0], (err, files) => {
+	const normalizedPath = path.normalize(result.filePaths[0]);
+
+	fs.readdir(normalizedPath, (err, files) => {
+		const settingsFile = files.find((r) => r == "icsettings.json");
+		if (settingsFile) {
+			mainWindow.webContents.send(
+				"settingsFileFound",
+				readJsonFile(path.join(normalizedPath, settingsFile))
+			);
+		}
+
 		const replyFiles = [];
 		files.forEach((file) => {
 			const extension = file
@@ -126,13 +136,24 @@ ipcMain.on("select-dirs", async (event, arg) => {
 			if (["jpg", "jpeg", "png"].includes(extension)) {
 				replyFiles.push({
 					name: file,
-					path: result.filePaths[0] + "\\" + file,
+					path: path.join(normalizedPath, file),
 				});
 			}
 		});
+
 		event.reply("fileList", replyFiles);
 	});
 });
+
+function readJsonFile(f) {
+	try {
+		let rawdata = fs.readFileSync(f);
+		return JSON.parse(rawdata);
+	} catch (error) {
+		console.log(error);
+		return {};
+	}
+}
 
 ipcMain.on("readFile", async (event, arg) => {
 	event.reply("fileResponse", fs.readFileSync(arg).toString("base64"));
