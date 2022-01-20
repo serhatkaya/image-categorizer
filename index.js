@@ -1,6 +1,6 @@
 "use strict";
 const path = require("path");
-const { app, BrowserWindow, Menu } = require("electron");
+const { app, BrowserWindow, Menu, shell } = require("electron");
 /// const {autoUpdater} = require('electron-updater');
 const { is } = require("electron-util");
 const unhandled = require("electron-unhandled");
@@ -9,6 +9,7 @@ const contextMenu = require("electron-context-menu");
 const menu = require("./menu.js");
 const { ipcMain, dialog } = require("electron");
 const fs = require("fs");
+
 let outputhPath = "";
 
 unhandled();
@@ -16,7 +17,7 @@ debug();
 contextMenu();
 
 // Note: Must match `build.appId` in package.json
-app.setAppUserModelId("com.company.AppName");
+app.setAppUserModelId("com.serhatkaya.ImageCategorizer");
 
 // Uncomment this before publishing your first version.
 // It's commented out as it throws an error if there are no published versions.
@@ -95,6 +96,20 @@ ipcMain.on("chooseFile", (event, arg) => {
 		const base64 = fs.readFileSync(filePaths[0]).toString("base64");
 		event.reply("chosenFile", base64);
 	});
+});
+//0 for soft 1 for hard.
+var deleteMode = 0;
+ipcMain.on("deleteFile", async (event, arg) => {
+	if (deleteMode == 0) {
+		shell.trashItem(arg);
+	} else {
+		fs.unlink(arg, (err) => {
+			if (err) throw err;
+
+			console.log(arg + " was deleted");
+		});
+	}
+	event.reply("fileDeleted", arg);
 });
 
 ipcMain.on("select-dirs", async (event, arg) => {
