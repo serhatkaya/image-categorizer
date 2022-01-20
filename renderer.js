@@ -19,20 +19,22 @@ $(function () {
 	});
 
 	ipcRenderer.on("fileDeleted", (event, path) => {
-		images = images.filter((r) => r.path != path);
-		getMeAnotherFile();
+		const index = images.findIndex((r) => r.path == path);
+		if (index > -1) {
+			images.splice(index, 1);
+			getMeAnotherFile();
+		}
 	});
 
 	function getMeAnotherFile() {
-		if (currentIndex == images.length - 1) {
+		if (images[currentIndex - 1]) {
 			previousImage();
-		} else {
+		} else if (images[currentIndex + 1]) {
 			nextImage();
 		}
 	}
 
 	ipcRenderer.on("settingsFileFound", (event, settingsToapp) => {
-		console.log(settingsToapp);
 		applySettings(settingsToapp);
 	});
 
@@ -79,13 +81,21 @@ $(function () {
 	function handlePress(key) {
 		const category = settings.find((r) => r.key == key);
 		if (category) {
-			moveFileToCategory(key, images[currentIndex].path);
+			moveFileToCategory(images[currentIndex].path, category.name);
 		}
 	}
 
 	function moveFileToCategory(path, category) {
 		ipcRenderer.send("moveFileToCategory", { path: path, category: category });
 	}
+
+	ipcRenderer.on("fileMoved", (event, filepath) => {
+		const index = images.findIndex((r) => r.path == filepath);
+		if (index > -1) {
+			images.splice(index, 1);
+			getMeAnotherFile();
+		}
+	});
 
 	function deleteFile() {
 		ipcRenderer.send("deleteFile", images[currentIndex].path);

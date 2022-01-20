@@ -101,15 +101,33 @@ ipcMain.on("chooseFile", (event, arg) => {
 var deleteMode = 0;
 ipcMain.on("deleteFile", async (event, arg) => {
 	if (deleteMode == 0) {
-		shell.trashItem(arg);
+		shell.trashItem(path.normalize(arg));
 	} else {
 		fs.unlink(arg, (err) => {
 			if (err) throw err;
-
 			console.log(arg + " was deleted");
 		});
 	}
 	event.reply("fileDeleted", arg);
+});
+
+ipcMain.on("moveFileToCategory", async (event, request) => {
+	const baseFolder = path.dirname(path.normalize(request.path));
+	const fileName = path.basename(request.path);
+	const categoryFolderPath = path.normalize(
+		path.join(baseFolder, request.category)
+	);
+	const categoryFolderFileFullPath = path.normalize(
+		path.join(categoryFolderPath, fileName)
+	);
+	if (!fs.existsSync(categoryFolderPath)) {
+		fs.mkdirSync(categoryFolderPath);
+		fs.renameSync(request.path, categoryFolderFileFullPath);
+	} else {
+		fs.renameSync(request.path, categoryFolderFileFullPath);
+	}
+
+	event.reply("fileMoved", request.path);
 });
 
 ipcMain.on("select-dirs", async (event, arg) => {
@@ -118,7 +136,6 @@ ipcMain.on("select-dirs", async (event, arg) => {
 	});
 
 	const normalizedPath = path.normalize(result.filePaths[0]);
-
 	fs.readdir(normalizedPath, (err, files) => {
 		const settingsFile = files.find((r) => r == "icsettings.json");
 		if (settingsFile) {
