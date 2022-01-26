@@ -10,8 +10,6 @@ const menu = require("./menu.js");
 const { ipcMain, dialog } = require("electron");
 const fs = require("fs");
 
-let outputhPath = "";
-
 unhandled();
 debug();
 contextMenu();
@@ -99,6 +97,7 @@ ipcMain.on("chooseFile", (event, arg) => {
 });
 //0 for soft 1 for hard.
 var deleteMode = 0;
+var selectedPath;
 ipcMain.on("deleteFile", async (event, arg) => {
 	if (deleteMode == 0) {
 		shell.trashItem(path.normalize(arg));
@@ -127,7 +126,14 @@ ipcMain.on("moveFileToCategory", async (event, request) => {
 		fs.renameSync(request.path, categoryFolderFileFullPath);
 	}
 
-	event.reply("fileMoved", request.path);
+	event.reply("fileMoved", { name: fileName, movedTo: request.category });
+});
+
+ipcMain.on("writeSettingsFile", (event, arg) => {
+	fs.writeFileSync(
+		path.join(selectedPath, "icsettings.json"),
+		JSON.stringify(arg)
+	);
 });
 
 ipcMain.on("select-dirs", async (event, arg) => {
@@ -136,6 +142,7 @@ ipcMain.on("select-dirs", async (event, arg) => {
 	});
 
 	const normalizedPath = path.normalize(result.filePaths[0]);
+	selectedPath = normalizedPath;
 	fs.readdir(normalizedPath, (err, files) => {
 		const settingsFile = files.find((r) => r == "icsettings.json");
 		if (settingsFile) {
